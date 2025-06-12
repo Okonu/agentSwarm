@@ -46,7 +46,6 @@ Be helpful, understanding, and solution-focused.
 """
 
     async def process(self, message: str, context: Dict[str, Any] = None) -> AgentResponse:
-        """Process support requests with customer data lookup"""
         try:
             tool_calls = []
             response_parts = []

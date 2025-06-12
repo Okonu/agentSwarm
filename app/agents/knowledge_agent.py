@@ -5,22 +5,26 @@ from app.tools.vector_store import VectorStore
 from app.tools.web_search import WebSearchTool
 from typing import Dict, Any, List
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
 
 class KnowledgeAgent(BaseAgent):
     def __init__(self, llm_client: LLMClient, vector_store: VectorStore):
-        super().__init__("Knowledge", AgentType.KNOWLEDGE, llm_client)
+        super().__init__("Enhanced_Knowledge", AgentType.KNOWLEDGE, llm_client)
         self.vector_store = vector_store
         self.web_search = WebSearchTool()
 
         self.system_prompt = """
-You are a Knowledge Agent specialized in providing information about InfinitePay's products and services.
+You are an Enhanced Knowledge Agent specialized in providing detailed information about InfinitePay's products and services with advanced pricing intelligence. Always answer in english.
 
-Your primary sources of information:
-1. InfinitePay's website content (via RAG retrieval)
-2. Web search for general questions
+Your capabilities include:
+1. Structured pricing data analysis and comparison
+2. Volume-based rate explanations
+3. Payment method specific information
+4. Product feature comparisons
+5. Accurate fee calculations and ranges
 
 InfinitePay Products/Services:
 - Maquininhas (card readers): Smart, Celular, Tap-to-Pay
@@ -28,111 +32,80 @@ InfinitePay Products/Services:
 - Business tools: PDV, Loja Online, Gestão de Cobrança
 - Financial services: Conta Digital, Empréstimo, Cartão, Rendimento
 
-Instructions:
-1. For InfinitePay-related questions, use the retrieved context first
-2. For general questions, use web search
-3. Always cite your sources
-4. Provide accurate, helpful information
-5. If you don't have specific information, say so clearly
-6. Respond in the same language as the user's question
+Enhanced Instructions:
+1. For pricing queries, provide specific rates when available
+2. Explain volume tiers and conditions clearly
+3. Compare different payment methods when relevant
+4. Include rate ranges and conditions
+5. Cite sources and provide context
+6. If pricing data is incomplete, explain what's available vs missing
+7. Respond in the same language as the user's question
 
-Be conversational but professional. Focus on being helpful and accurate.
+Always prioritize accuracy and provide structured, detailed responses for pricing inquiries.
 """
 
     async def process(self, message: str, context: Dict[str, Any] = None) -> AgentResponse:
-        """Process knowledge queries using RAG and web search"""
         try:
             tool_calls = []
             response_parts = []
 
-            infinitepay_keywords = [
-                'infinitepay', 'maquininha', 'maquinha', 'smart', 'celular',
-                'tap-to-pay', 'pix', 'boleto', 'conta digital', 'emprestimo',
-                'cartao', 'rendimento', 'pdv', 'loja online', 'taxa', 'fee'
-            ]
+            query_analysis = self._analyze_query(message)
 
-            is_infinitepay_query = any(keyword in message.lower() for keyword in infinitepay_keywords)
+            try:
+                search_type = "pricing" if query_analysis["is_pricing_query"] else "all"
+                rag_results = await self.vector_store.search_enhanced(
+                    message,
+                    k=5,
+                    search_type=search_type
+                )
 
-            if is_infinitepay_query:
-                try:
-                    rag_results = await self.vector_store.search(message, k=3)
+                if rag_results:
+                    pricing_insights = self.vector_store.extract_pricing_insights(message, rag_results)
+                    enhanced_context = self._build_enhanced_context(
+                        rag_results,
+                        pricing_insights,
+                        query_analysis
+                    )
 
-                    if rag_results:
-                        context_docs = []
-                        for result in rag_results:
-                            context_docs.append(f"""
-Source: {result['metadata']['url']}
-Title: {result['metadata']['title']}
-Content: {result['document'][:500]}...
-Similarity: {result['similarity']:.2f}
-""")
+                    tool_calls.append(ToolCall(
+                        tool_name="enhanced_rag_retrieval",
+                        tool_input={
+                            "query": message,
+                            "search_type": search_type,
+                            "query_analysis": query_analysis
+                        },
+                        tool_output={
+                            "results_count": len(rag_results),
+                            "top_similarity": rag_results[0]['similarity'] if rag_results else 0,
+                            "has_pricing_data": pricing_insights["has_pricing_data"],
+                            "payment_methods_found": list(pricing_insights["payment_methods"]),
+                            "rate_ranges": pricing_insights["rate_ranges"]
+                        }
+                    ))
 
-                        rag_context = "\n".join(context_docs)
+                    enhanced_response = await self._generate_enhanced_response(
+                        message, enhanced_context, pricing_insights, query_analysis
+                    )
+                    response_parts.append(enhanced_response)
 
-                        tool_calls.append(ToolCall(
-                            tool_name="rag_retrieval",
-                            tool_input={"query": message},
-                            tool_output={"results_count": len(rag_results),
-                                         "top_similarity": rag_results[0]['similarity']}
-                        ))
+            except Exception as e:
+                logger.error(f"Error in enhanced RAG retrieval: {str(e)}")
 
-                        rag_prompt = f"""
-Based on the following InfinitePay website content, answer the user's question.
-
-Retrieved Content:
-{rag_context}
-
-User Question: {message}
-
-Provide a helpful, accurate answer based on the retrieved content. If the content doesn't fully answer the question, say so and provide what information you can.
-"""
-
-                        rag_response = await self.llm_client.generate_response_with_system_prompt(
-                            self.system_prompt,
-                            rag_prompt
-                        )
-                        response_parts.append(rag_response)
-
-                except Exception as e:
-                    logger.error(f"Error in RAG retrieval: {str(e)}")
-
-            if not response_parts or not is_infinitepay_query:
+            if not response_parts or not query_analysis["is_infinitepay_specific"]:
                 try:
                     search_results = await self.web_search.search(message, max_results=3)
 
                     if search_results and not search_results[0].get("error"):
-                        search_context = []
-                        for result in search_results:
-                            search_context.append(f"""
-Title: {result.get('title', 'N/A')}
-Snippet: {result.get('snippet', 'N/A')}
-Source: {result.get('source', 'Web Search')}
-""")
-
-                        web_context = "\n".join(search_context)
+                        web_response = await self._generate_web_search_response(
+                            message, search_results
+                        )
+                        response_parts.append(web_response)
 
                         tool_calls.append(ToolCall(
                             tool_name="web_search",
                             tool_input={"query": message},
                             tool_output={"results_count": len(search_results)}
                         ))
-
-                        web_prompt = f"""
-Based on the following web search results, answer the user's question.
-
-Search Results:
-{web_context}
-
-User Question: {message}
-
-Provide a helpful answer based on the search results.
-"""
-
-                        web_response = await self.llm_client.generate_response_with_system_prompt(
-                            self.system_prompt,
-                            web_prompt
-                        )
-                        response_parts.append(web_response)
 
                 except Exception as e:
                     logger.error(f"Error in web search: {str(e)}")
@@ -150,12 +123,16 @@ Provide a helpful answer based on the search results.
                 agent_type=self.agent_type,
                 response=final_response,
                 tool_calls=tool_calls,
-                confidence=0.8 if tool_calls else 0.3,
-                metadata={"used_rag": is_infinitepay_query, "sources_count": len(tool_calls)}
+                confidence=0.9 if tool_calls else 0.3,
+                metadata={
+                    "query_analysis": query_analysis,
+                    "sources_count": len(tool_calls),
+                    "enhanced_features_used": True
+                }
             )
 
         except Exception as e:
-            logger.error(f"Error in knowledge agent: {str(e)}")
+            logger.error(f"Error in enhanced knowledge agent: {str(e)}")
             return AgentResponse(
                 agent_name=self.name,
                 agent_type=self.agent_type,
@@ -164,3 +141,148 @@ Provide a helpful answer based on the search results.
                 confidence=0.0,
                 metadata={"error": str(e)}
             )
+
+    def _analyze_query(self, message: str) -> Dict[str, Any]:
+        message_lower = message.lower()
+
+        is_pricing_query = any(keyword in message_lower for keyword in [
+            'fee', 'rate', 'cost', 'price', 'charge', '%', 'percent', 'how much',
+            'quanto custa', 'taxa', 'preço', 'valor'
+        ])
+
+        is_comparison_query = any(keyword in message_lower for keyword in [
+            'compare', 'difference', 'vs', 'versus', 'better', 'best',
+            'comparar', 'diferença', 'melhor'
+        ])
+
+        is_infinitepay_specific = any(keyword in message_lower for keyword in [
+            'infinitepay', 'maquininha', 'maquinha', 'smart', 'celular',
+            'tap-to-pay', 'pix', 'boleto', 'conta digital'
+        ])
+
+        mentioned_products = []
+        product_keywords = {
+            'maquininha_smart': ['maquininha smart', 'smart machine'],
+            'infinitetap': ['infinitetap', 'celular', 'phone machine'],
+            'payment_link': ['payment link', 'link de pagamento'],
+            'pix': ['pix'],
+            'digital_account': ['conta digital', 'digital account']
+        }
+
+        for product, keywords in product_keywords.items():
+            if any(keyword in message_lower for keyword in keywords):
+                mentioned_products.append(product)
+
+        return {
+            "is_pricing_query": is_pricing_query,
+            "is_comparison_query": is_comparison_query,
+            "is_infinitepay_specific": is_infinitepay_specific,
+            "mentioned_products": mentioned_products,
+            "query_complexity": "high" if (
+                        is_pricing_query and is_comparison_query) else "medium" if is_pricing_query else "low"
+        }
+
+    def _build_enhanced_context(self, rag_results: List[Dict], pricing_insights: Dict, query_analysis: Dict) -> str:
+        context_parts = []
+
+        if pricing_insights["has_pricing_data"]:
+            context_parts.append("=== PRICING INFORMATION ===")
+
+            if pricing_insights["rate_ranges"]:
+                context_parts.append("Rate Ranges by Payment Method:")
+                for method, rates in pricing_insights["rate_ranges"].items():
+                    if rates["min"] == rates["max"]:
+                        context_parts.append(f"• {method.title()}: {rates['min']}%")
+                    else:
+                        context_parts.append(f"• {method.title()}: {rates['min']}% - {rates['max']}%")
+
+            if pricing_insights["specific_rates"]:
+                context_parts.append("\nDetailed Pricing:")
+                for rate_info in pricing_insights["specific_rates"][:5]:
+                    rate_line = f"• {rate_info['payment_method'].title()}: {rate_info['rate']}"
+                    if rate_info["volume_tier"]:
+                        rate_line += f" (Volume: {rate_info['volume_tier']})"
+                    context_parts.append(rate_line)
+
+            if pricing_insights["volume_tiers"]:
+                context_parts.append(f"\nVolume Tiers Available: {', '.join(pricing_insights['volume_tiers'])}")
+
+        context_parts.append("\n=== RETRIEVED CONTENT ===")
+        for i, result in enumerate(rag_results[:3]):
+            context_parts.append(f"\nSource {i + 1} (Similarity: {result['similarity']:.2f}):")
+            context_parts.append(f"URL: {result['metadata']['url']}")
+            context_parts.append(f"Content: {result['document'][:400]}...")
+
+            if result.get("chunk_type"):
+                context_parts.append(f"Content Type: {result['chunk_type']}")
+
+        return "\n".join(context_parts)
+
+    async def _generate_enhanced_response(self, query: str, enhanced_context: str, pricing_insights: Dict,
+                                          query_analysis: Dict) -> str:
+
+        if query_analysis["is_pricing_query"]:
+            prompt_template = """
+Based on the following InfinitePay pricing information, provide a comprehensive answer about fees and rates.
+
+{enhanced_context}
+
+User Question: {query}
+
+Instructions:
+1. Provide specific rates when available
+2. Explain any volume-based pricing tiers
+3. Compare different payment methods if relevant
+4. Mention any conditions or limitations
+5. If specific rates aren't available, explain what information is provided
+6. Be precise and cite sources
+
+Provide a detailed, accurate response focusing on pricing information.
+"""
+        else:
+            prompt_template = """
+Based on the following InfinitePay information, answer the user's question comprehensively.
+
+{enhanced_context}
+
+User Question: {query}
+
+Provide a helpful, accurate answer based on the retrieved content. Include specific details when available.
+"""
+
+        formatted_prompt = prompt_template.format(
+            enhanced_context=enhanced_context,
+            query=query
+        )
+
+        return await self.llm_client.generate_response_with_system_prompt(
+            self.system_prompt,
+            formatted_prompt
+        )
+
+    async def _generate_web_search_response(self, query: str, search_results: List[Dict]) -> str:
+        search_context = []
+        for result in search_results:
+            search_context.append(f"""
+Title: {result.get('title', 'N/A')}
+Snippet: {result.get('snippet', 'N/A')}
+Source: {result.get('source', 'Web Search')}
+""")
+
+        web_context = "\n".join(search_context)
+
+        web_prompt = f"""
+Based on the following web search results, answer the user's question.
+
+Search Results:
+{web_context}
+
+User Question: {query}
+
+Provide a helpful answer based on the search results.
+"""
+
+        return await self.llm_client.generate_response_with_system_prompt(
+            self.system_prompt,
+            web_prompt
+        )

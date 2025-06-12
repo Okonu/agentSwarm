@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgentCommunicationHub:
-    """Manages communication between agents"""
 
     def __init__(self):
         self.agents: Dict[str, Any] = {}
@@ -15,12 +14,10 @@ class AgentCommunicationHub:
         self.workflow_log: List[Dict[str, Any]] = []
 
     def register_agent(self, agent_name: str, agent_instance):
-        """Register an agent with the communication hub"""
         self.agents[agent_name] = agent_instance
         logger.info(f"Registered agent: {agent_name}")
 
     async def send_message(self, from_agent: str, to_agent: str, message: str, context: Dict[str, Any] = None):
-        """Send a message from one agent to another"""
         if to_agent not in self.agents:
             raise ValueError(f"Agent {to_agent} not found")
 
@@ -44,9 +41,7 @@ class AgentCommunicationHub:
         return response
 
     def get_workflow_log(self) -> List[Dict[str, Any]]:
-        """Get the current workflow log"""
         return self.workflow_log.copy()
 
     def reset_workflow(self):
-        """Reset the workflow log for a new request"""
         self.workflow_log.clear()

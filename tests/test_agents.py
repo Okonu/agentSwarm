@@ -12,7 +12,6 @@ from app.models.schemas import AgentType
 
 @pytest.fixture
 def mock_llm_client():
-    """Mock LLM client for testing"""
     client = Mock(spec=LLMClient)
     client.generate_response_with_system_prompt = AsyncMock()
     return client
@@ -20,7 +19,6 @@ def mock_llm_client():
 
 @pytest.fixture
 def mock_vector_store():
-    """Mock vector store for testing"""
     store = Mock(spec=VectorStore)
     store.search = AsyncMock()
     return store
@@ -29,7 +27,6 @@ def mock_vector_store():
 class TestRouterAgent:
     @pytest.mark.asyncio
     async def test_router_agent_routes_to_knowledge(self, mock_llm_client):
-        """Test that router correctly routes product questions to knowledge agent"""
         mock_llm_client.generate_response_with_system_prompt.return_value = '''
         {
             "agent": "KNOWLEDGE",
@@ -50,7 +47,6 @@ class TestRouterAgent:
 
     @pytest.mark.asyncio
     async def test_router_agent_routes_to_support(self, mock_llm_client):
-        """Test that router correctly routes support issues to support agent"""
         mock_llm_client.generate_response_with_system_prompt.return_value = '''
         {
             "agent": "SUPPORT",
@@ -68,7 +64,6 @@ class TestRouterAgent:
 
     @pytest.mark.asyncio
     async def test_router_agent_handles_invalid_json(self, mock_llm_client):
-        """Test router fallback when LLM returns invalid JSON"""
         mock_llm_client.generate_response_with_system_prompt.return_value = "Invalid JSON response"
 
         router = RouterAgent(mock_llm_client)
@@ -81,7 +76,6 @@ class TestRouterAgent:
 class TestKnowledgeAgent:
     @pytest.mark.asyncio
     async def test_knowledge_agent_uses_rag_for_infinitepay_query(self, mock_llm_client, mock_vector_store):
-        """Test that knowledge agent uses RAG for InfinitePay queries"""
         mock_vector_store.search.return_value = [
             {
                 "document": "Maquininha Smart fees are 2.5% for credit cards",
@@ -102,7 +96,6 @@ class TestKnowledgeAgent:
 
     @pytest.mark.asyncio
     async def test_knowledge_agent_uses_web_search_for_general_query(self, mock_llm_client, mock_vector_store):
-        """Test that knowledge agent uses web search for general queries"""
         mock_llm_client.generate_response_with_system_prompt.return_value = "Palmeiras last game was yesterday."
 
         knowledge_agent = KnowledgeAgent(mock_llm_client, mock_vector_store)
@@ -121,7 +114,6 @@ class TestKnowledgeAgent:
 class TestSupportAgent:
     @pytest.mark.asyncio
     async def test_support_agent_gets_customer_info(self, mock_llm_client):
-        """Test that support agent retrieves customer information"""
         mock_llm_client.generate_response_with_system_prompt.return_value = "I can help you with your account issue."
 
         support_agent = SupportAgent(mock_llm_client)
@@ -153,7 +145,6 @@ class TestSupportAgent:
 class TestPersonalityAgent:
     @pytest.mark.asyncio
     async def test_personality_agent_enhances_response(self, mock_llm_client):
-        """Test that personality agent enhances technical responses"""
         mock_llm_client.generate_response_with_system_prompt.return_value = "I'd be happy to help! The Maquininha Smart fees are 2.5% for credit cards. Let me know if you have any other questions!"
 
         personality_agent = PersonalityAgent(mock_llm_client)

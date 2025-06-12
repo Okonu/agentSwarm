@@ -17,15 +17,12 @@ class BaseAgent(ABC):
 
     @abstractmethod
     async def process(self, message: str, context: Dict[str, Any] = None) -> AgentResponse:
-        """Process a message and return an agent response"""
         pass
 
     def add_tool(self, name: str, tool_func):
-        """Add a tool to the agent's toolkit"""
         self.tools[name] = tool_func
 
     async def call_tool(self, tool_name: str, **kwargs) -> Any:
-        """Call a specific tool"""
         if tool_name not in self.tools:
             raise ValueError(f"Tool {tool_name} not found")
 
@@ -37,5 +34,4 @@ class BaseAgent(ABC):
             raise
 
     def get_system_prompt(self) -> str:
-        """Get the system prompt for this agent"""
         return self.system_prompt

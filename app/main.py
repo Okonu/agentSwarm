@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgentSwarmOrchestrator:
-    """Main orchestrator for the agent swarm"""
 
     def __init__(self):
         self.llm_client = LLMClient()
@@ -42,13 +41,13 @@ class AgentSwarmOrchestrator:
         self.is_initialized = False
 
     async def initialize(self):
-        """Initialize the vector store with InfinitePay content"""
         if self.is_initialized:
             return
 
         try:
             collection_info = self.vector_store.get_collection_info()
 
+            # Use the correct key name that matches VectorStore.get_collection_info()
             if collection_info["document_count"] == 0:
                 logger.info("Vector store is empty, scraping InfinitePay website...")
                 await self._scrape_and_index_content()
@@ -63,13 +62,13 @@ class AgentSwarmOrchestrator:
             raise
 
     async def _scrape_and_index_content(self):
-        """Scrape InfinitePay website and index content"""
         try:
             scraper = WebScraper()
             documents = await scraper.scrape_multiple_urls(settings.INFINITEPAY_URLS)
 
             if documents:
-                await self.vector_store.add_documents(documents)
+                # Use the correct method name from VectorStore
+                await self.vector_store.add_documents_enhanced(documents)
                 logger.info(f"Successfully indexed {len(documents)} documents")
             else:
                 logger.warning("No documents were scraped")
@@ -78,7 +77,6 @@ class AgentSwarmOrchestrator:
             logger.error(f"Error scraping and indexing content: {str(e)}")
 
     async def process_message(self, message: str, user_id: str) -> MessageResponse:
-        """Process a user message through the agent swarm"""
         try:
             self.communication_hub.reset_workflow()
 
@@ -149,7 +147,6 @@ orchestrator = AgentSwarmOrchestrator()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
     logger.info("Starting Agent Swarm API...")
     await orchestrator.initialize()
     yield
@@ -172,13 +169,11 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {"message": "Agent Swarm API is running", "status": "healthy"}
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy",
         "initialized": orchestrator.is_initialized,
@@ -188,7 +183,6 @@ async def health_check():
 
 @app.post(f"{settings.API_V1_STR}/chat", response_model=MessageResponse)
 async def chat(request: MessageRequest):
-    """Main chat endpoint for processing user messages"""
     try:
         if not orchestrator.is_initialized:
             await orchestrator.initialize()
@@ -203,7 +197,6 @@ async def chat(request: MessageRequest):
 
 @app.post(f"{settings.API_V1_STR}/rebuild-index")
 async def rebuild_index(background_tasks: BackgroundTasks):
-    """Rebuild the vector store index (admin endpoint)"""
     try:
         background_tasks.add_task(orchestrator._scrape_and_index_content)
         return {"message": "Index rebuild started in background"}

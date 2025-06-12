@@ -7,7 +7,6 @@ from app.main import app
 
 @pytest.mark.asyncio
 async def test_health_endpoint():
-    """Test the health check endpoint"""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.get("/health")
 
@@ -19,7 +18,6 @@ async def test_health_endpoint():
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_product_query():
-    """Test chat endpoint with product query"""
     with patch('app.main.orchestrator') as mock_orchestrator:
         mock_orchestrator.is_initialized = True
         mock_orchestrator.process_message = AsyncMock(return_value={
@@ -48,7 +46,6 @@ async def test_chat_endpoint_product_query():
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_support_query():
-    """Test chat endpoint with support query"""
     with patch('app.main.orchestrator') as mock_orchestrator:
         mock_orchestrator.is_initialized = True
         mock_orchestrator.process_message = AsyncMock(return_value={
