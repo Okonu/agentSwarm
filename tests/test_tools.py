@@ -10,7 +10,6 @@ from app.tools.customer_tools import CustomerDataTool, TransactionTool
 class TestWebScraper:
     @pytest.mark.asyncio
     async def test_scrape_url_success(self):
-        """Test successful URL scraping"""
         mock_html = """
         <html>
             <head><title>Test Page</title></head>
@@ -43,7 +42,6 @@ class TestWebScraper:
 class TestCustomerDataTool:
     @pytest.mark.asyncio
     async def test_get_customer_info_found(self):
-        """Test getting existing customer information"""
         tool = CustomerDataTool()
         result = await tool.get_customer_info("client789")
 
@@ -53,7 +51,6 @@ class TestCustomerDataTool:
 
     @pytest.mark.asyncio
     async def test_get_customer_info_not_found(self):
-        """Test getting non-existent customer information"""
         tool = CustomerDataTool()
         result = await tool.get_customer_info("nonexistent")
 
@@ -62,7 +59,6 @@ class TestCustomerDataTool:
 
     @pytest.mark.asyncio
     async def test_check_account_status(self):
-        """Test checking account status"""
         tool = CustomerDataTool()
         result = await tool.check_account_status("client789")
 

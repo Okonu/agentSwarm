@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class WebSearchTool:
-    """Simple web search tool using DuckDuckGo API"""
 
     def __init__(self):
         self.session = None
@@ -20,7 +19,6 @@ class WebSearchTool:
             await self.session.aclose()
 
     async def search(self, query: str, max_results: int = 3) -> List[Dict[str, Any]]:
-        """Search the web and return results"""
         try:
 
             url = "https://api.duckduckgo.com/"

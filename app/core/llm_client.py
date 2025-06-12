@@ -18,7 +18,6 @@ class LLMClient:
             temperature: Optional[float] = None,
             max_tokens: Optional[int] = None
     ) -> str:
-        """Generate a response using the LLM"""
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -37,7 +36,6 @@ class LLMClient:
             user_message: str,
             temperature: Optional[float] = None
     ) -> str:
-        """Generate a response with a system prompt"""
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}

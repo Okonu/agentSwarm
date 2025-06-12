@@ -40,7 +40,6 @@ Always respond with valid JSON only.
 """
 
     async def process(self, message: str, context: Dict[str, Any] = None) -> AgentResponse:
-        """Analyze message and route to appropriate agent"""
         try:
             response_text = await self.llm_client.generate_response_with_system_prompt(
                 self.system_prompt,

@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class CustomerDataTool:
-    """Mock customer data tool - in real implementation this would connect to actual customer DB"""
 
     def __init__(self):
         self.customers = {
@@ -27,7 +26,6 @@ class CustomerDataTool:
         }
 
     async def get_customer_info(self, user_id: str) -> Dict[str, Any]:
-        """Get customer information"""
         try:
             customer = self.customers.get(user_id)
             if customer:
@@ -39,7 +37,6 @@ class CustomerDataTool:
             return {"success": False, "error": str(e)}
 
     async def check_account_status(self, user_id: str) -> Dict[str, Any]:
-        """Check account status and potential issues"""
         try:
             customer = self.customers.get(user_id)
             if not customer:
@@ -73,10 +70,8 @@ class CustomerDataTool:
 
 
 class TransactionTool:
-    """Mock transaction tool"""
 
     async def get_recent_transactions(self, user_id: str, limit: int = 5) -> Dict[str, Any]:
-        """Get recent transactions for a user"""
         try:
             mock_transactions = [
                 {
