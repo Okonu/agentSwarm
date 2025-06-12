@@ -28,11 +28,9 @@ class WebScraper:
 
             soup = BeautifulSoup(response.content, 'html.parser')
 
-            # Remove script and style elements
             for script in soup(["script", "style"]):
                 script.decompose()
 
-            # Extract structured content
             content = {
                 "url": url,
                 "title": soup.title.string if soup.title else "",
@@ -42,12 +40,10 @@ class WebScraper:
                 "links": []
             }
 
-            # Extract meta description
             meta_desc = soup.find("meta", attrs={"name": "description"})
             if meta_desc:
                 content["meta_description"] = meta_desc.get("content", "")
 
-            # Extract internal links
             for link in soup.find_all('a', href=True):
                 href = link['href']
                 if href.startswith('/') or 'infinitepay.io' in href:
@@ -68,7 +64,6 @@ class WebScraper:
             tasks = [self.scrape_url(url) for url in urls]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Filter out exceptions and return successful results
             valid_results = []
             for result in results:
                 if isinstance(result, dict) and "error" not in result:

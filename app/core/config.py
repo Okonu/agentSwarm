@@ -1,10 +1,12 @@
 import os
 from typing import List
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
-
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Agent Swarm API"
 
@@ -38,6 +40,12 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
+        env_file = ".env"
 
 
 settings = Settings()
+
+if settings.OPENAI_API_KEY:
+    print(f"OpenAI API key loaded: {settings.OPENAI_API_KEY[:10]}...")
+else:
+    print("OpenAI API key not found!")
