@@ -156,7 +156,7 @@ pytest test_tools.py -v
 ## 📁 Project Structure
 
 ```
-agent-swarm/
+agentSwarm/
 ├── app/
 │   ├── agents/
 │   │   ├── base_agent.py          # Base agent class
