@@ -42,8 +42,8 @@ The system consists of four main agents that collaborate to handle user queries:
 
 ### 1. Clone and Setup
 ```bash
-git clone <repository-url>
-cd agent-swarm
+git clone https://github.com/Okonu/agentSwarm.git
+cd agentSwarm
 ```
 
 ### 2. Environment Configuration
