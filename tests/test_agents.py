@@ -76,13 +76,21 @@ class TestRouterAgent:
 class TestKnowledgeAgent:
     @pytest.mark.asyncio
     async def test_knowledge_agent_uses_rag_for_infinitepay_query(self, mock_llm_client, mock_vector_store):
-        mock_vector_store.search.return_value = [
+        mock_vector_store.search_enhanced.return_value = [
             {
                 "document": "Maquininha Smart fees are 2.5% for credit cards",
                 "metadata": {"url": "https://infinitepay.io/maquininha", "title": "Maquininha Smart"},
                 "similarity": 0.9
             }
         ]
+
+        mock_vector_store.extract_pricing_insights.return_value = {
+            "has_pricing_data": True,
+            "payment_methods": ["credit"],
+            "rate_ranges": {},
+            "volume_tiers": [],
+            "specific_rates": []
+        }
 
         mock_llm_client.generate_response_with_system_prompt.return_value = "The Maquininha Smart has fees of 2.5% for credit cards."
 
@@ -91,8 +99,8 @@ class TestKnowledgeAgent:
 
         assert response.agent_name == "Knowledge"
         assert response.agent_type == AgentType.KNOWLEDGE
-        assert any(tc.tool_name == "rag_retrieval" for tc in response.tool_calls)
-        mock_vector_store.search.assert_called_once()
+        assert any(tc.tool_name == "enhanced_rag_retrieval" for tc in response.tool_calls)
+        mock_vector_store.search_enhanced.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_knowledge_agent_uses_web_search_for_general_query(self, mock_llm_client, mock_vector_store):

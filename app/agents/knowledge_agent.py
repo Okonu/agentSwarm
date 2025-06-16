@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class KnowledgeAgent(BaseAgent):
     def __init__(self, llm_client: LLMClient, vector_store: VectorStore):
-        super().__init__("Enhanced_Knowledge", AgentType.KNOWLEDGE, llm_client)
+        super().__init__("Knowledge", AgentType.KNOWLEDGE, llm_client)
         self.vector_store = vector_store
         self.web_search = WebSearchTool()
 
