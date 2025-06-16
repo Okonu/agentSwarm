@@ -291,7 +291,16 @@ The system automatically scrapes and indexes content from:
 - https://www.infinitepay.io/maquininha-celular
 - https://www.infinitepay.io/tap-to-pay
 - https://www.infinitepay.io/pdv
-- [... and 13 more URLs]
+- https://www.infinitepay.io/receba-na-hora
+- https://www.infinitepay.io/gestao-de-cobranca-2 (and /gestao-de-cobranca)
+- https://www.infinitepay.io/link-de-pagamento
+- https://www.infinitepay.io/loja-online
+- https://www.infinitepay.io/boleto
+- https://www.infinitepay.io/conta-digital (and /conta-pj)
+- https://www.infinitepay.io/pix (and /pix-parcelado)
+- https://www.infinitepay.io/emprestimo
+- https://www.infinitepay.io/cartao
+- https://www.infinitepay.io/rendimento
 
 ## 🐳 Docker Configuration
 
