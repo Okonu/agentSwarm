@@ -1,5 +1,4 @@
-version: '3.8'
-
+version: '3.3'
 services:
   agent-swarm:
     build: .
@@ -22,6 +21,5 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-
 volumes:
   vector_data:
