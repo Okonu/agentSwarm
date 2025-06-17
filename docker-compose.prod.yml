@@ -1,17 +1,20 @@
-version: '3.3'
+version: '3.8'  # Updated version
+
 services:
   agent-swarm:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: agentswarm_app
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_MODEL=gpt-3.5-turbo
-      - LLM_TEMPERATURE=0.7
+      - LLM_MODEL=${LLM_MODEL:-gpt-3.5-turbo}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
       - VECTOR_STORE_PATH=/app/data/vector_store
-      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
     volumes:
       - vector_data:/app/data/vector_store
       - ./logs:/app/logs
@@ -20,5 +23,18 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   vector_data:
